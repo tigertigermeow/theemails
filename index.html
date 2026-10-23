@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,14 +31,10 @@
     ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.6); }
     .mark-highlight {
-      background-color: #fef08a;
-      color: #713f12;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
-    .dark .mark-highlight {
       background-color: #854d0e;
       color: #fef08a;
+      padding: 0 2px;
+      border-radius: 2px;
     }
     @media print {
       body * { visibility: hidden; }
@@ -57,10 +53,10 @@
     }
   </style>
 </head>
-<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150 overflow-hidden select-none">
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans transition-colors duration-150 overflow-hidden select-none">
 
   <!-- TOP HEADER / NAV -->
-  <header class="no-print h-14 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+  <header class="no-print h-14 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
     <div class="flex items-center gap-3">
       <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm">
         <i data-lucide="archive" class="w-4 h-4"></i>
@@ -68,9 +64,9 @@
       <div>
         <h1 class="text-sm font-semibold tracking-tight flex items-center gap-2">
           FOIA Records Webmail
-          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">Static Vault</span>
+          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800">Static Vault</span>
         </h1>
-        <p class="text-[11px] text-slate-500 dark:text-slate-400">RFC 5322 Unclassified Release Explorer</p>
+        <p class="text-[11px] text-slate-400">RFC 5322 Unclassified Release Explorer</p>
       </div>
     </div>
 
@@ -78,20 +74,20 @@
     <div class="flex items-center gap-2">
       <!-- File input hidden for upload -->
       <input type="file" id="file-uploader" class="hidden" accept=".json,.eml" multiple>
-      <button onclick="document.getElementById('file-uploader').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors shadow-sm">
-        <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-600"></i>
+      <button onclick="document.getElementById('file-uploader').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors shadow-sm">
+        <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-400"></i>
         <span>Import JSON / .EML</span>
       </button>
 
-      <button onclick="exportCurrentSelection()" title="Export current list to JSON" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors shadow-sm">
-        <i data-lucide="download" class="w-3.5 h-3.5 text-slate-500"></i>
+      <button onclick="exportCurrentSelection()" title="Export current list to JSON" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors shadow-sm">
+        <i data-lucide="download" class="w-3.5 h-3.5 text-slate-400"></i>
         <span class="hidden sm:inline">Export</span>
       </button>
 
-      <div class="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+      <div class="h-4 w-px bg-slate-800 mx-1"></div>
 
       <!-- Theme Switcher -->
-      <button onclick="toggleTheme()" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors" title="Toggle Theme">
+      <button onclick="toggleTheme()" class="p-2 rounded-md hover:bg-slate-800 text-slate-400 transition-colors" title="Toggle Theme">
         <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
         <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
       </button>
@@ -102,10 +98,109 @@
   <div class="flex-1 flex overflow-hidden">
 
     <!-- 1. SIDEBAR (Navigation, Categories, Senders) -->
-    <aside class="no-print w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex flex-col shrink-0">
+    <aside class="no-print w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col shrink-0">
       
       <!-- Folders & Quick Filters -->
       <div class="p-3">
-        <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 mb-2">Folders</div>
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">Folders</div>
         <nav class="space-y-0.5 text-xs">
-          <button onclick="
+          <button onclick="setFilter('folder', 'all')" id="nav-all" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-200 bg-slate-800 transition">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="inbox" class="w-4 h-4 text-emerald-400"></i>
+              <span>All FOIA Inboxes</span>
+            </span>
+            <span id="badge-all-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 font-mono">0</span>
+          </button>
+          
+          <button onclick="setFilter('folder', 'flagged')" id="nav-flagged" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-400 hover:bg-slate-800/60 transition">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+              <span>Flagged / Key Leads</span>
+            </span>
+            <span id="badge-flagged-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 font-mono">0</span>
+          </button>
+
+          <button onclick="setFilter('folder', 'attachments')" id="nav-attachments" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-400 hover:bg-slate-800/60 transition">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="paperclip" class="w-4 h-4 text-sky-400"></i>
+              <span>Has Attachments</span>
+            </span>
+            <span id="badge-attachments-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 font-mono">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Tag Filters -->
+      <div class="px-3 pt-2">
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
+          <span>Categories & Tags</span>
+          <button onclick="clearTagFilter()" id="clear-tag-btn" class="hidden text-[10px] text-emerald-400 hover:underline">Clear</button>
+        </div>
+        <div id="tags-list" class="flex flex-wrap gap-1 px-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="h-px bg-slate-800 mx-4 my-3"></div>
+
+      <!-- Key Officials / Senders Breakdown -->
+      <div class="flex-1 overflow-y-auto px-3 pb-3">
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">Correspondents</div>
+        <div id="senders-list" class="space-y-1 text-xs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Archive Info Card -->
+      <div class="p-3 border-t border-slate-800 text-[11px] text-slate-400 bg-slate-900/40">
+        <div class="flex items-center justify-between font-mono mb-1">
+          <span>Records Loaded:</span>
+          <strong id="stat-total-records" class="text-slate-200">0</strong>
+        </div>
+        <div class="truncate text-[10px] text-slate-500">FOIA Email Archive</div>
+      </div>
+    </aside>
+
+    <!-- 2. MIDDLE PANE (Email List & Instant Search) -->
+    <section class="w-96 border-r border-slate-800 flex flex-col shrink-0 bg-slate-900 select-text">
+      
+      <!-- Search Box & Filter Header -->
+      <div class="p-3 border-b border-slate-800 space-y-2 select-none">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Search senders, subjects, bodies, dates..." 
+            class="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-slate-100 placeholder-slate-400"
+            oninput="handleSearch(this.value)"
+          >
+          <button onclick="clearSearch()" id="search-clear-btn" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-200">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Sort and result meta -->
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span id="filtered-count-label">Showing all records</span>
+          <div class="flex items-center gap-1">
+            <span class="text-[10px] uppercase tracking-wider font-semibold">Sort:</span>
+            <select id="sort-order" onchange="handleSortChange(this.value)" class="bg-transparent text-slate-300 font-medium focus:outline-none cursor-pointer">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="sender">Sender (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable List of Emails -->
+      <div id="email-list-container" class="flex-1 overflow-y-auto divide-y divide-slate-800/60">
+        <!-- Injected via renderEmailList() -->
+      </div>
+    </section>
+
+    <!-- 3. RIGHT PANE (Email Detail Viewer) -->
+    <main id="printable-pane" class="flex-1 flex flex-col bg-slate-900 overflow-hidden relative select-text">
+      
+      <!-- Top Detail
