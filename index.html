@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FOIA Mail Archives - Public Records Explorer</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
@@ -25,30 +24,15 @@
     }
   </script>
   <style>
-    /* Custom scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.6); }
-    .mark-highlight {
-      background-color: #854d0e;
-      color: #fef08a;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
+    .mark-highlight { background-color: #854d0e; color: #fef08a; padding: 0 2px; border-radius: 2px; }
     @media print {
       body * { visibility: hidden; }
       #printable-pane, #printable-pane * { visibility: visible; }
-      #printable-pane {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 20px;
-        background: white !important;
-        color: black !important;
-      }
+      #printable-pane { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; background: white !important; color: black !important; }
       .no-print { display: none !important; }
     }
   </style>
@@ -70,23 +54,23 @@
       </div>
     </div>
 
-    <!-- Actions & Global Utilities -->
+    <!-- Actions -->
     <div class="flex items-center gap-2">
-      <!-- File input hidden for upload -->
-      <input type="file" id="file-uploader" class="hidden" accept=".json,.eml" multiple>
-      <button onclick="document.getElementById('file-uploader').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors shadow-sm">
-        <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-400"></i>
-        <span>Import JSON / .EML</span>
+      <!-- Hidden file input without restrictive filters -->
+      <input type="file" id="file-uploader" class="hidden" multiple>
+      
+      <button onclick="document.getElementById('file-uploader').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-emerald-700 hover:bg-emerald-600 text-white transition-colors shadow-sm">
+        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+        <span>Import .EML / .JSON Batch</span>
       </button>
 
-      <button onclick="exportCurrentSelection()" title="Export current list to JSON" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors shadow-sm">
-        <i data-lucide="download" class="w-3.5 h-3.5 text-slate-400"></i>
-        <span class="hidden sm:inline">Export</span>
+      <button id="download-json-btn" onclick="exportForGitHub()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors shadow-sm">
+        <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span>Download emails.json for GitHub</span>
       </button>
 
       <div class="h-4 w-px bg-slate-800 mx-1"></div>
 
-      <!-- Theme Switcher -->
       <button onclick="toggleTheme()" class="p-2 rounded-md hover:bg-slate-800 text-slate-400 transition-colors" title="Toggle Theme">
         <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
         <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
@@ -97,10 +81,8 @@
   <!-- MAIN THREE-PANE CONTAINER -->
   <div class="flex-1 flex overflow-hidden">
 
-    <!-- 1. SIDEBAR (Navigation, Categories, Senders) -->
+    <!-- 1. SIDEBAR -->
     <aside class="no-print w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col shrink-0">
-      
-      <!-- Folders & Quick Filters -->
       <div class="p-3">
         <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">Folders</div>
         <nav class="space-y-0.5 text-xs">
@@ -119,59 +101,34 @@
             </span>
             <span id="badge-flagged-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 font-mono">0</span>
           </button>
-
-          <button onclick="setFilter('folder', 'attachments')" id="nav-attachments" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-400 hover:bg-slate-800/60 transition">
-            <span class="flex items-center gap-2.5">
-              <i data-lucide="paperclip" class="w-4 h-4 text-sky-400"></i>
-              <span>Has Attachments</span>
-            </span>
-            <span id="badge-attachments-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 font-mono">0</span>
-          </button>
         </nav>
       </div>
 
-      <!-- Tag Filters -->
-      <div class="px-3 pt-2">
-        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
-          <span>Categories & Tags</span>
-          <button onclick="clearTagFilter()" id="clear-tag-btn" class="hidden text-[10px] text-emerald-400 hover:underline">Clear</button>
-        </div>
-        <div id="tags-list" class="flex flex-wrap gap-1 px-1">
-          <!-- Populated dynamically -->
-        </div>
-      </div>
+      <div class="h-px bg-slate-800 mx-4 my-2"></div>
 
-      <div class="h-px bg-slate-800 mx-4 my-3"></div>
-
-      <!-- Key Officials / Senders Breakdown -->
+      <!-- Senders Breakdown -->
       <div class="flex-1 overflow-y-auto px-3 pb-3">
         <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 mb-2">Correspondents</div>
-        <div id="senders-list" class="space-y-1 text-xs">
-          <!-- Populated dynamically -->
-        </div>
+        <div id="senders-list" class="space-y-1 text-xs"></div>
       </div>
 
-      <!-- Archive Info Card -->
       <div class="p-3 border-t border-slate-800 text-[11px] text-slate-400 bg-slate-900/40">
         <div class="flex items-center justify-between font-mono mb-1">
           <span>Records Loaded:</span>
           <strong id="stat-total-records" class="text-slate-200">0</strong>
         </div>
-        <div class="truncate text-[10px] text-slate-500">FOIA Email Archive</div>
       </div>
     </aside>
 
-    <!-- 2. MIDDLE PANE (Email List & Instant Search) -->
+    <!-- 2. MIDDLE PANE (List & Search) -->
     <section class="w-96 border-r border-slate-800 flex flex-col shrink-0 bg-slate-900 select-text">
-      
-      <!-- Search Box & Filter Header -->
       <div class="p-3 border-b border-slate-800 space-y-2 select-none">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
           <input 
             type="text" 
             id="search-input" 
-            placeholder="Search senders, subjects, bodies, dates..." 
+            placeholder="Search senders, subjects, contents..." 
             class="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-slate-100 placeholder-slate-400"
             oninput="handleSearch(this.value)"
           >
@@ -180,27 +137,356 @@
           </button>
         </div>
 
-        <!-- Sort and result meta -->
         <div class="flex items-center justify-between text-[11px] text-slate-400">
-          <span id="filtered-count-label">Showing all records</span>
-          <div class="flex items-center gap-1">
-            <span class="text-[10px] uppercase tracking-wider font-semibold">Sort:</span>
-            <select id="sort-order" onchange="handleSortChange(this.value)" class="bg-transparent text-slate-300 font-medium focus:outline-none cursor-pointer">
-              <option value="date-desc">Newest first</option>
-              <option value="date-asc">Oldest first</option>
-              <option value="sender">Sender (A-Z)</option>
-            </select>
-          </div>
+          <span id="filtered-count-label">0 messages</span>
+          <select id="sort-order" onchange="handleSortChange(this.value)" class="bg-transparent text-slate-300 font-medium focus:outline-none cursor-pointer">
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="sender">Sender (A-Z)</option>
+          </select>
         </div>
       </div>
 
-      <!-- Scrollable List of Emails -->
-      <div id="email-list-container" class="flex-1 overflow-y-auto divide-y divide-slate-800/60">
-        <!-- Injected via renderEmailList() -->
-      </div>
+      <div id="email-list-container" class="flex-1 overflow-y-auto divide-y divide-slate-800/60"></div>
     </section>
 
-    <!-- 3. RIGHT PANE (Email Detail Viewer) -->
+    <!-- 3. RIGHT PANE (Email Detail) -->
     <main id="printable-pane" class="flex-1 flex flex-col bg-slate-900 overflow-hidden relative select-text">
+      <div class="no-print h-12 border-b border-slate-800 px-4 flex items-center justify-between bg-slate-900/50 shrink-0 select-none">
+        <div class="flex items-center gap-2">
+          <button id="detail-star-btn" onclick="toggleCurrentFlag()" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition" title="Flag / Bookmark">
+            <i data-lucide="star" class="w-4 h-4"></i>
+          </button>
+          <button onclick="copyPermalink()" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800 text-slate-300 transition">
+            <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+            <span id="permalink-label">Copy Link</span>
+          </button>
+          <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-slate-700 hover:bg-slate-800 text-slate-300 transition">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Print</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="detail-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 select-none">
+        <div class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-3">
+          <i data-lucide="mail-open" class="w-8 h-8 text-slate-600"></i>
+        </div>
+        <h3 class="text-base font-semibold text-slate-300">No Email Selected</h3>
+        <p class="text-xs max-w-sm mt-1 text-slate-500">Click "Import .EML / .JSON Batch" above to load your emails, or place emails.json in your GitHub repo.</p>
+      </div>
+
+      <div id="detail-content" class="flex-1 overflow-y-auto hidden">
+        <div class="p-6 border-b border-slate-800/80 bg-slate-900/30">
+          <h2 id="email-subject" class="text-xl font-bold tracking-tight text-white leading-snug mb-3"></h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-y-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-14 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">From:</span>
+              <span id="email-from" class="font-medium text-slate-100 font-mono"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-14 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">Date:</span>
+              <span id="email-date" class="text-slate-300"></span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="w-14 text-slate-500 uppercase text-[10px] tracking-wider font-semibold pt-0.5">To:</span>
+              <span id="email-to" class="text-slate-300 font-mono flex-1"></span>
+            </div>
+            <div class="flex items-start gap-2" id="email-cc-row">
+              <span class="w-14 text-slate-500 uppercase text-[10px] tracking-wider font-semibold pt-0.5">CC:</span>
+              <span id="email-cc" class="text-slate-400 font-mono flex-1"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <div id="email-body-text" class="prose prose-sm prose-invert max-w-none font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-slate-200 select-text"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-800 text-white border border-slate-700 px-4 py-2.5 rounded-lg shadow-xl text-xs font-medium transform translate-y-10 opacity-0 pointer-events-none transition-all duration-200">
+    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <script>
+    let emails = [];
+    let currentFilter = { type: 'folder', value: 'all' };
+    let searchQuery = '';
+    let selectedEmailId = null;
+    let sortOrder = 'date-desc';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.documentElement.classList.add('dark');
+
+      const hash = window.location.hash.replace('#', '');
+      if (hash) selectedEmailId = hash;
+
+      setupFileUploader();
+
+      // Check if emails.json exists in GitHub repository
+      fetch('emails.json')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            emails = data;
+            recalculateStats();
+            renderEmailList();
+            if (emails.length > 0) selectEmail(emails[0].id);
+          }
+        })
+        .catch(() => {});
+
+      lucide.createIcons();
+    });
+
+    function setupFileUploader() {
+      const uploader = document.getElementById('file-uploader');
+      uploader.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files || files.length === 0) return;
+
+        showToast(`Reading ${files.length} file(s)...`);
+        let imported = 0;
+
+        for (const file of files) {
+          try {
+            const content = await file.text();
+            
+            // If it's a JSON file
+            if (file.name.toLowerCase().endsWith('.json') || content.trim().startsWith('[')) {
+              try {
+                const parsed = JSON.parse(content);
+                if (Array.isArray(parsed)) {
+                  emails = [...parsed, ...emails];
+                  imported += parsed.length;
+                  continue;
+                }
+              } catch(e) {}
+            }
+
+            // Otherwise parse as MIME / .EML text
+            const parsed = parseEMLText(content, file.name);
+            emails.push(parsed);
+            imported++;
+          } catch (err) {
+            console.error("Could not parse file:", file.name, err);
+          }
+        }
+
+        uploader.value = '';
+        recalculateStats();
+        renderEmailList();
+        if (emails.length > 0) selectEmail(emails[0].id);
+        showToast(`Successfully loaded ${imported} email(s)!`);
+      });
+    }
+
+    // Flexible RFC 5322 parser
+    function parseEMLText(raw, filename) {
+      const match = raw.match(/\r?\n\r?\n/);
+      const headerPart = match ? raw.slice(0, match.index) : raw;
+      const bodyPart = match ? raw.slice(match.index + match[0].length) : '';
+
+      const lines = headerPart.replace(/\r?\n[ \t]+/g, ' ').split(/\r?\n/);
+      const headers = {};
+      lines.forEach(line => {
+        const idx = line.indexOf(':');
+        if (idx > -1) {
+          const key = line.slice(0, idx).toLowerCase().trim();
+          headers[key] = line.slice(idx + 1).trim();
+        }
+      });
+
+      function decodeHeader(val) {
+        if (!val) return '';
+        return val.replace(/=\?([^?]+)\?([BQbq])\?([^?]+)\?=/g, (_, encType, mode, txt) => {
+          try {
+            if (mode.toUpperCase() === 'B') return atob(txt);
+            if (mode.toUpperCase() === 'Q') return txt.replace(/_/g, ' ').replace(/=([A-F0-9]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+          } catch(e) {}
+          return txt;
+        });
+      }
+
+      let dateIso = new Date().toISOString();
+      if (headers['date']) {
+        const d = new Date(headers['date']);
+        if (!isNaN(d.getTime())) dateIso = d.toISOString();
+      }
+
+      // Simple body cleanup
+      let cleanBody = bodyPart
+        .replace(/--[a-zA-Z0-9_-]+--?/g, '')
+        .replace(/Content-Type:[^\n]+/gi, '')
+        .replace(/Content-Transfer-Encoding:[^\n]+/gi, '')
+        .replace(/=[\r\n]+/g, '')
+        .replace(/=([A-Fa-f0-9]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/<[^>]+>/g, ' ')
+        .trim();
+
+      return {
+        id: 'msg-' + Math.random().toString(36).substring(2, 9),
+        subject: decodeHeader(headers['subject']) || filename.replace(/\.[^/.]+$/, ""),
+        from: decodeHeader(headers['from']) || 'Unknown Sender',
+        to: headers['to'] ? headers['to'].split(',').map(s => decodeHeader(s.trim())) : [],
+        cc: headers['cc'] ? headers['cc'].split(',').map(s => decodeHeader(s.trim())) : [],
+        date: dateIso,
+        flagged: false,
+        body_text: cleanBody || '(Empty or binary message body)'
+      };
+    }
+
+    // 1-Click Export for GitHub
+    function exportForGitHub() {
+      if (emails.length === 0) {
+        showToast("No emails imported yet to save!");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(emails, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'emails.json';
+      a.click();
+      showToast("Downloaded emails.json! Upload this to your GitHub repository.");
+    }
+
+    function renderEmailList() {
+      const container = document.getElementById('email-list-container');
+      const filtered = emails.filter(m => {
+        if (currentFilter.value === 'flagged' && !m.flagged) return false;
+        if (currentFilter.type === 'sender' && m.from !== currentFilter.value) return false;
+        if (searchQuery.trim() !== '') {
+          const q = searchQuery.toLowerCase();
+          return (m.subject || '').toLowerCase().includes(q) ||
+                 (m.from || '').toLowerCase().includes(q) ||
+                 (m.body_text || '').toLowerCase().includes(q);
+        }
+        return true;
+      }).sort((a,b) => {
+        if (sortOrder === 'date-desc') return new Date(b.date || 0) - new Date(a.date || 0);
+        if (sortOrder === 'date-asc') return new Date(a.date || 0) - new Date(b.date || 0);
+        if (sortOrder === 'sender') return (a.from || '').localeCompare(b.from || '');
+        return 0;
+      });
+
+      document.getElementById('filtered-count-label').textContent = `${filtered.length} of ${emails.length} messages`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-500 select-none">
+            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+            <div class="text-xs font-medium">No records found</div>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(mail => `
+        <div onclick="selectEmail('${mail.id}')" class="p-3.5 cursor-pointer border-l-4 ${mail.id === selectedEmailId ? 'bg-emerald-950/30 border-emerald-500' : 'border-transparent hover:bg-slate-800/40'}">
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="text-xs font-semibold text-slate-100 truncate">${escapeHtml(mail.from)}</span>
+            <span class="text-[10px] text-slate-500 shrink-0">${new Date(mail.date).toLocaleDateString()}</span>
+          </div>
+          <div class="text-xs font-medium text-slate-300 mb-1 leading-snug line-clamp-1">${escapeHtml(mail.subject)}</div>
+          <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed mb-2">${escapeHtml(mail.body_text.slice(0, 95))}...</p>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function selectEmail(id) {
+      selectedEmailId = id;
+      const mail = emails.find(e => e.id === id);
+      if (!mail) return;
+
+      document.getElementById('detail-empty-state').classList.add('hidden');
+      document.getElementById('detail-content').classList.remove('hidden');
+
+      document.getElementById('email-subject').textContent = mail.subject;
+      document.getElementById('email-from').textContent = mail.from;
+      document.getElementById('email-date').textContent = new Date(mail.date).toLocaleString();
+      document.getElementById('email-to').textContent = mail.to.join(', ') || '(None)';
       
-      <!-- Top Detail
+      const ccRow = document.getElementById('email-cc-row');
+      if (mail.cc && mail.cc.length > 0) {
+        ccRow.classList.remove('hidden');
+        document.getElementById('email-cc').textContent = mail.cc.join(', ');
+      } else {
+        ccRow.classList.add('hidden');
+      }
+
+      document.getElementById('email-body-text').textContent = mail.body_text;
+      renderEmailList();
+    }
+
+    function recalculateStats() {
+      document.getElementById('stat-total-records').textContent = emails.length;
+      document.getElementById('badge-all-count').textContent = emails.length;
+      document.getElementById('badge-flagged-count').textContent = emails.filter(e => e.flagged).length;
+
+      const senders = {};
+      emails.forEach(e => { if (e.from) senders[e.from] = (senders[e.from] || 0) + 1; });
+      document.getElementById('senders-list').innerHTML = Object.entries(senders).slice(0, 10).map(([s, c]) => `
+        <button onclick="setFilter('sender', '${escapeHtml(s)}')" class="w-full text-left truncate flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200">
+          <span class="truncate font-mono text-[11px]">${escapeHtml(s)}</span>
+          <span class="text-[10px] text-slate-500 font-mono ml-1">(${c})</span>
+        </button>
+      `).join('');
+    }
+
+    function setFilter(type, val) {
+      currentFilter = { type, value: val };
+      renderEmailList();
+    }
+
+    function handleSearch(q) {
+      searchQuery = q;
+      document.getElementById('search-clear-btn').classList.toggle('hidden', q.trim() === '');
+      renderEmailList();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      handleSearch('');
+    }
+
+    function handleSortChange(val) {
+      sortOrder = val;
+      renderEmailList();
+    }
+
+    function toggleCurrentFlag() {
+      const email = emails.find(e => e.id === selectedEmailId);
+      if (email) {
+        email.flagged = !email.flagged;
+        selectEmail(selectedEmailId);
+        recalculateStats();
+      }
+    }
+
+    function copyPermalink() {
+      navigator.clipboard.writeText(window.location.href);
+      showToast("Link copied!");
+    }
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      t.classList.remove('translate-y-10', 'opacity-0');
+      setTimeout(() => t.classList.add('translate-y-10', 'opacity-0'), 3000);
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
