@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FOIA Mail Archives - Public Records Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#15803d',
+              600: '#166534',
+              700: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.6); }
+    .mark-highlight {
+      background-color: #fef08a;
+      color: #713f12;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    .dark .mark-highlight {
+      background-color: #854d0e;
+      color: #fef08a;
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #printable-pane, #printable-pane * { visibility: visible; }
+      #printable-pane {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+        background: white !important;
+        color: black !important;
+      }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150 overflow-hidden select-none">
+
+  <!-- TOP HEADER / NAV -->
+  <header class="no-print h-14 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm">
+        <i data-lucide="archive" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-semibold tracking-tight flex items-center gap-2">
+          FOIA Records Webmail
+          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">Static Vault</span>
+        </h1>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">RFC 5322 Unclassified Release Explorer</p>
+      </div>
+    </div>
+
+    <!-- Actions & Global Utilities -->
+    <div class="flex items-center gap-2">
+      <!-- File input hidden for upload -->
+      <input type="file" id="file-uploader" class="hidden" accept=".json,.eml" multiple>
+      <button onclick="document.getElementById('file-uploader').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors shadow-sm">
+        <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-600"></i>
+        <span>Import JSON / .EML</span>
+      </button>
+
+      <button onclick="exportCurrentSelection()" title="Export current list to JSON" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors shadow-sm">
+        <i data-lucide="download" class="w-3.5 h-3.5 text-slate-500"></i>
+        <span class="hidden sm:inline">Export</span>
+      </button>
+
+      <div class="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+      <!-- Theme Switcher -->
+      <button onclick="toggleTheme()" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors" title="Toggle Theme">
+        <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+        <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN THREE-PANE CONTAINER -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- 1. SIDEBAR (Navigation, Categories, Senders) -->
+    <aside class="no-print w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex flex-col shrink-0">
+      
+      <!-- Folders & Quick Filters -->
+      <div class="p-3">
+        <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 mb-2">Folders</div>
+        <nav class="space-y-0.5 text-xs">
+          <button onclick="setFilter('folder', 'all')" id="nav-all" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-800 transition">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="inbox" class="w-4 h-4 text-emerald-600"></i>
+              <span>All FOIA Inboxes</span>
+            </span>
+            <span id="badge-all-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">0</span>
+          </button>
+          
+          <button onclick="setFilter('folder', 'flagged')" id="nav-flagged" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+              <span>Flagged / Key Leads</span>
+            </span>
+            <span id="badge-flagged-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">0</span>
+          </button>
+
+          <button onclick="setFilter('folder', 'attachments')" id="nav-attachments" class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="paperclip" class="w-4 h-4 text-sky-500"></i>
+              <span>Has Attachments</span>
+            </span>
+            <span id="badge-attachments-count" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Tag Filters -->
+      <div class="px-3 pt-2">
+        <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
+          <span>Categories & Tags</span>
+          <button onclick="clearTagFilter()" id="clear-tag-btn" class="hidden text-[10px] text-emerald-600 hover:underline">Clear</button>
+        </div>
+        <div id="tags-list" class="flex flex-wrap gap-1 px-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="h-px bg-slate-200 dark:bg-slate-800 mx-4 my-3"></div>
+
+      <!-- Key Officials / Senders Breakdown -->
+      <div class="flex-1 overflow-y-auto px-3 pb-3">
+        <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 mb-2">Correspondents</div>
+        <div id="senders-list" class="space-y-1 text-xs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Archive Info Card -->
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 bg-white/40 dark:bg-slate-900/40">
+        <div class="flex items-center justify-between font-mono mb-1">
+          <span>Records Loaded:</span>
+          <strong id="stat-total-records">0</strong>
+        </div>
+        <div class="truncate text-[10px] text-slate-400">FOIA Case: <span class="font-mono">HQ-2024-00912-F</span></div>
+      </div>
+    </aside>
+
+    <!-- 2. MIDDLE PANE (Email List & Instant Search) -->
+    <section class="w-96 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 bg-white dark:bg-slate-900 select-text">
+      
+      <!-- Search Box & Filter Header -->
+      <div class="p-3 border-b border-slate-200 dark:border-slate-800 space-y-2 select-none">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Search senders, subjects, bodies, dates..." 
+            class="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+            oninput="handleSearch(this.value)"
+          >
+          <button onclick="clearSearch()" id="search-clear-btn" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Sort and result meta -->
+        <div class="flex items-center justify-between text-[11px] text-slate-500">
+          <span id="filtered-count-label">Showing all records</span>
+          <div class="flex items-center gap-1">
+            <span class="text-[10px] uppercase tracking-wider font-semibold">Sort:</span>
+            <select id="sort-order" onchange="handleSortChange(this.value)" class="bg-transparent text-slate-700 dark:text-slate-300 font-medium focus:outline-none cursor-pointer">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="sender">Sender (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable List of Emails -->
+      <div id="email-list-container" class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+        <!-- Injected via renderEmailList() -->
+      </div>
+    </section>
+
+    <!-- 3. RIGHT PANE (Email Detail Viewer) -->
+    <main id="printable-pane" class="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden relative select-text">
+      
+      <!-- Top Detail Toolbar -->
+      <div class="no-print h-12 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0 select-none">
+        <div class="flex items-center gap-2">
+          <button id="detail-star-btn" onclick="toggleCurrentFlag()" class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition" title="Flag / Bookmark">
+            <i data-lucide="star" class="w-4 h-4"></i>
+          </button>
+          <button onclick="copyPermalink()" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Copy permalink to share">
+            <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+            <span id="permalink-label">Copy Link</span>
+          </button>
+          <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Print this email or save as PDF">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Print / PDF</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="downloadAsEML()" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition font-mono">
+            <i data-lucide="file-code" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Download .EML</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Detail Body Container -->
+      <div id="detail-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 select-none">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+          <i data-lucide="mail-open" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+        </div>
+        <h3 class="text-base font-semibold text-slate-700 dark:text-slate-300">No Email Selected</h3>
+        <p class="text-xs max-w-sm mt-1 text-slate-400">Choose a record from the list or search FOIA release headers to inspect email contents, CCs, and disclosures.</p>
+      </div>
+
+      <div id="detail-content" class="flex-1 overflow-y-auto hidden">
+        <!-- Message Header Card -->
+        <div class="p-6 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30">
+          <div class="flex items-start justify-between gap-4 mb-4">
+            <h2 id="email-subject" class="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-snug">
+              Subject Line
+            </h2>
+            <div id="email-tag-badges" class="flex flex-wrap gap-1.5 shrink-0">
+              <!-- tags -->
+            </div>
+          </div>
+
+          <!-- Metadata Table -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-y-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-14 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">From:</span>
+              <span id="email-from" class="font-medium text-slate-900 dark:text-slate-100 font-mono"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-14 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">Date:</span>
+              <span id="email-date" class="text-slate-600 dark:text-slate-300"></span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="w-14 text-slate-400 uppercase text-[10px] tracking-wider font-semibold pt-0.5">To:</span>
+              <span id="email-to" class="text-slate-700 dark:text-slate-300 font-mono flex-1"></span>
+            </div>
+            <div class="flex items-start gap-2" id="email-cc-row">
+              <span class="w-14 text-slate-400 uppercase text-[10px] tracking-wider font-semibold pt-0.5">CC:</span>
+              <span id="email-cc" class="text-slate-600 dark:text-slate-400 font-mono flex-1"></span>
+            </div>
+          </div>
+
+          <!-- Attachments Row -->
+          <div id="email-attachments-section" class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 hidden">
+            <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+              <span>Attached Documents (<span id="attachments-count">0</span>)</span>
+            </div>
+            <div id="attachments-container" class="flex flex-wrap gap-2">
+              <!-- Attached items -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Body Content -->
+        <div class="p-6">
+          <div class="mb-4 flex items-center justify-between no-print border-b border-slate-100 dark:border-slate-800 pb-2">
+            <span class="text-[11px] font-medium uppercase tracking-wider text-slate-400">Message Content</span>
+            <div class="flex items-center gap-1 text-xs">
+              <button id="view-mode-plain" onclick="setBodyView('plain')" class="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">Clean Text</button>
+              <button id="view-mode-raw" onclick="setBodyView('raw')" class="px-2 py-0.5 rounded text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">Raw Source</button>
+            </div>
+          </div>
+
+          <div id="email-body-text" class="prose prose-sm dark:prose-invert max-w-none font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-slate-800 dark:text-slate-200 select-text"></div>
+          <pre id="email-body-raw" class="hidden p-4 rounded-lg bg-slate-100 dark:bg-slate-950 font-mono text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre select-text"></pre>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-2.5 rounded-lg shadow-xl text-xs font-medium transform translate-y-10 opacity-0 pointer-events-none transition-all duration-200">
+    <i data-lucide="check" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // 1. BUILT-IN REALISTIC FOIA DATASET (Simulated Department of Energy / Public Records archive)
+    const DEFAULT_EMAILS = [
+      {
+        id: "foia-msg-0001",
+        from: "h.turner@hq.doe.gov",
+        to: ["m.garcia@llnl.gov", "r.vance@sandia.gov"],
+        cc: ["compliance-archive@hq.doe.gov"],
+        date: "2024-03-12T09:41:22Z",
+        subject: "URGENT: Redacted briefing memo regarding Project Boreas site assessment",
+        tags: ["Project Boreas", "Urgent", "Redactions"],
+        flagged: true,
+        body_text: "Marcus, Robert,\n\nFollowing up on yesterday's cabinet sub-committee inquiry. Attached is the revised summary regarding the geotechnical findings at Site 4.\n\nKey takeaways:\n1. The seismic sensors recorded intermittent anomalies between Jan 14 and Jan 28. [REDACTED PER FOIA EXEMPTION (b)(4)]\n2. The environmental assessment conducted by Dr. Aris confirmed zero water table contamination outside the secondary perimeter.\n3. The press office is preparing a standard Q&A document should local media inquiry spike this Friday.\n\nPlease confirm receipt of the telemetry data pack before 14:00 EST.\n\nRespectfully,\nHarold Turner\nOffice of Critical Infrastructure Assessments\nU.S. Department of Energy",
+        attachments: [
+          { name: "boreas_geotech_exec_summary_v3.pdf", size: "2.4 MB" },
+          { name: "seismic_sensor_batch_01.csv", size: "840 KB" }
+        ]
+      },
+      {
+        id: "foia-msg-0002",
+        from: "m.garcia@llnl.gov",
+        to: ["h.turner@hq.doe.gov"],
+        cc: ["d.thorne@orau.gov"],
+        date: "2024-03-12T10:15:00Z",
+        subject: "Re: URGENT: Redacted briefing memo regarding Project Boreas site assessment",
+        tags: ["Project Boreas", "LLNL Review"],
+        flagged: false,
+        body_text: "Harold,\n\nReceived and reviewed. Dr. Thorne and I looked at the sensor metrics. \n\nNote that footnote 3 on page 9 misquotes the telemetry cadence—it was sampled every 250ms, not 1000ms. If this is submitted to Congressional oversight under the joint disclosure, we need that correction made immediately to prevent misinterpretation.\n\nAlso, has the IG's office cleared release of Appendix D? Last I heard, [REDACTED (b)(6)] requested an additional privacy redaction for the contracting officers listed.\n\nBest,\nMarcus Garcia, PhD\nLawrence Livermore National Laboratory",
+        attachments: []
+      },
+      {
+        id: "foia-msg-0003",
+        from: "j.sterling@contractor.aegis.com",
+        to: ["records-officer@hq.doe.gov", "foia-liaison@energy.gov"],
+        cc: [],
+        date: "2024-03-08T16:22:45Z",
+        subject: "Notice of Proprietary Claim: FOIA Request #HQ-2024-00912-F",
+        tags: ["Legal", "Contractor", "Exemption (b)(4)"],
+        flagged: true,
+        body_text: "Dear FOIA Appeals and Release Officer,\n\nWe represent Aegis Defense Dynamics in relation to the pending Freedom of Information Act disclosure #HQ-2024-00912-F.\n\nWe have completed our predisclosure notification review of the 318 pages identified for release. Please be advised that pages 112 through 145 contain proprietary algorithms, pricing schedules, and proprietary trade secrets strictly exempt from public disclosure under 5 U.S.C. § 552(b)(4).\n\nA formal letter detailing our legal objections and line-by-line redaction requests is attached for your general counsel's docket.\n\nSincerely,\nJonathan Sterling, Esq.\nSenior Counsel, Commercial Contracts",
+        attachments: [
+          { name: "Aegis_Objection_Letter_FOIA_b4.pdf", size: "4.1 MB" },
+          { name: "Redaction_Exhibit_A.pdf", size: "12.8 MB" }
+        ]
+      },
+      {
+        id: "foia-msg-0004",
+        from: "press-relations@energy.gov",
+        to: ["h.turner@hq.doe.gov", "secretary-staff@hq.doe.gov"],
+        cc: ["comms-team@energy.gov"],
+        date: "2024-03-04T11:04:19Z",
+        subject: "DRAFT Statement for Bloomberg reporter inquiry on grid modernization funding",
+        tags: ["Press", "Draft"],
+        flagged: false,
+        body_text: "Team,\n\nBloomberg's energy desk just emailed with three specific questions regarding the $45M grid modernization award distribution across Region 6. They have set a deadline for 17:00 ET today.\n\nProposed on-the-record response:\n\"The Department remains committed to equitable resilience upgrades in line with statutory criteria set forth under Title IV. All grant awards undergo rigorous multi-tier technical evaluation by independent panel experts.\"\n\nPlease let me know if Harold or the Deputy Assistant Secretary has any reservations before we clear this with front office.\n\nBest,\nSarah Jenkins\nDirector of Public Affairs",
+        attachments: []
+      },
+      {
+        id: "foia-msg-0005",
+        from: "r.vance@sandia.gov",
+        to: ["h.turner@hq.doe.gov", "m.garcia@llnl.gov"],
+        cc: [],
+        date: "2024-02-28T14:50:11Z",
+        subject: "Inter-laboratory calibration notes - February summary",
+        tags: ["LLNL Review", "Technical"],
+        flagged: false,
+        body_text: "Harold, Marcus,\n\nAttached is the monthly progress report on calibration standards across our test facilities.\n\nEverything came back nominal. Average variance remained below 0.04%, well within the acceptable threshold outlined in SOP-942.\n\nWe will be dark next Tuesday for facility maintenance. If you need any raw log exports before then, request them by COB tomorrow.\n\nRegards,\nRobert Vance\nSandia National Laboratories",
+        attachments: [
+          { name: "calibration_feb_2024.xlsx", size: "1.1 MB" }
+        ]
+      }
+    ];
+
+    // State
+    let emails = [];
+    let currentFilter = { type: 'folder', value: 'all' }; // type: 'folder', 'tag', 'sender'
+    let searchQuery = '';
+    let selectedEmailId = null;
+    let sortOrder = 'date-desc';
+    let bodyViewMode = 'plain';
+
+    // 2. INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check localStorage or default
+      const saved = localStorage.getItem('foia_emails_vault');
+      if (saved) {
+        try {
+          emails = JSON.parse(saved);
+        } catch (e) {
+          emails = [...DEFAULT_EMAILS];
+        }
+      } else {
+        emails = [...DEFAULT_EMAILS];
+      }
+
+      // Initialize theme
+      if (localStorage.getItem('foia_theme') === 'dark' || (!('foia_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+
+      // Check URL hash for permalink
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        selectedEmailId = hash;
+      }
+
+      setupFileUploader();
+      recalculateStatsAndTags();
+      renderEmailList();
+
+      if (selectedEmailId) {
+        const found = emails.find(e => e.id === selectedEmailId);
+        if (found) selectEmail(selectedEmailId);
+      }
+
+      lucide.createIcons();
+    });
+
+    // Hash change listener (back/forward browser nav)
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && hash !== selectedEmailId) {
+        selectEmail(hash, false);
+      }
+    });
+
+    // 3. FILTERING & SEARCH
+    function getFilteredEmails() {
+      return emails.filter(item => {
+        // Folder or category filter
+        if (currentFilter.type === 'folder') {
+          if (currentFilter.value === 'flagged' && !item.flagged) return false;
+          if (currentFilter.value === 'attachments' && (!item.attachments || item.attachments.length === 0)) return false;
+        } else if (currentFilter.type === 'tag') {
+          if (!item.tags || !item.tags.includes(currentFilter.value)) return false;
+        } else if (currentFilter.type === 'sender') {
+          if (item.from !== currentFilter.value) return false;
+        }
+
+        // Full-Text Search
+        if (searchQuery.trim() !== '') {
+          const q = searchQuery.toLowerCase();
+          const matchSubject = (item.subject || '').toLowerCase().includes(q);
+          const matchFrom = (item.from || '').toLowerCase().includes(q);
+          const matchTo = (Array.isArray(item.to) ? item.to.join(' ') : (item.to || '')).toLowerCase().includes(q);
+          const matchBody = (item.body_text || '').toLowerCase().includes(q);
+          const matchTags = (item.tags || []).some(t => t.toLowerCase().includes(q));
+
+          if (!matchSubject && !matchFrom && !matchTo && !matchBody && !matchTags) {
+            return false;
+          }
+        }
+
+        return true;
+      }).sort((a, b) => {
+        if (sortOrder === 'date-desc') {
+          return new Date(b.date || 0) - new Date(a.date || 0);
+        } else if (sortOrder === 'date-asc') {
+          return new Date(a.date || 0) - new Date(b.date || 0);
+        } else if (sortOrder === 'sender') {
+          return (a.from || '').localeCompare(b.from || '');
+        }
+        return 0;
+      });
+    }
+
+    // 4. RENDERING EMAIL LIST
+    function renderEmailList() {
+      const container = document.getElementById('email-list-container');
+      const filtered = getFilteredEmails();
+
+      document.getElementById('filtered-count-label').textContent = `${filtered.length} of ${emails.length} messages`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-400 select-none">
+            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+            <div class="text-xs font-medium">No correspondence matches your criteria</div>
+            <p class="text-[11px] text-slate-400 mt-1">Try resetting the query or selecting "All FOIA Inboxes"</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(mail => {
+        const isSelected = mail.id === selectedEmailId;
+        const formattedDate = formatDateShort(mail.date);
+        const snippet = (mail.body_text || '').replace(/\s+/g, ' ').slice(0, 105);
+        const hasAttach = mail.attachments && mail.attachments.length > 0;
+        
+        // Highlight terms in subject and sender
+        const highlightedSubject = highlightMatches(escapeHtml(mail.subject || '(No Subject)'), searchQuery);
+        const highlightedSender = highlightMatches(escapeHtml(mail.from || 'Unknown'), searchQuery);
+        const highlightedSnippet = highlightMatches(escapeHtml(snippet), searchQuery);
+
+        return `
+          <div 
+            onclick="selectEmail('${mail.id}')"
+            class="p-3.5 cursor-pointer transition border-l-4 ${isSelected ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-600' : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'}"
+          >
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${highlightedSender}</span>
+              <span class="text-[10px] text-slate-400 shrink-0">${formattedDate}</span>
+            </div>
+            
+            <div class="text-xs font-medium text-slate-800 dark:text-slate-200 mb-1 leading-snug line-clamp-1">
+              ${highlightedSubject}
+            </div>
+
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-2">
+              ${highlightedSnippet}...
+            </p>
+
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-slate-800/50">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${(mail.tags || []).slice(0, 2).map(t => `<span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">${escapeHtml(t)}</span>`).join('')}
+                ${(mail.tags && mail.tags.length > 2) ? `<span class="text-slate-400">+${mail.tags.length - 2}</span>` : ''}
+              </div>
+
+              <div class="flex items-center gap-2 text-slate-400">
+                ${hasAttach ? `<i data-lucide="paperclip" class="w-3 h-3 text-slate-400" title="Has attachment"></i>` : ''}
+                ${mail.flagged ? `<i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // 5. DETAIL VIEW RENDER
+    function selectEmail(id, updateHash = true) {
+      selectedEmailId = id;
+      if (updateHash) {
+        window.location.hash = id;
+      }
+
+      const mail = emails.find(e => e.id === id);
+      if (!mail) return;
+
+      document.getElementById('detail-empty-state').classList.add('hidden');
+      document.getElementById('detail-content').classList.remove('hidden');
+
+      // Populate headers
+      document.getElementById('email-subject').textContent = mail.subject || '(No Subject)';
+      document.getElementById('email-from').textContent = mail.from || 'Unknown';
+      document.getElementById('email-date').textContent = mail.date ? new Date(mail.date).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'medium' }) : 'Unknown Date';
+      
+      const toArr = Array.isArray(mail.to) ? mail.to : [mail.to];
+      document.getElementById('email-to').textContent = toArr.join(', ') || '(None)';
+
+      const ccRow = document.getElementById('email-cc-row');
+      const ccArr = Array.isArray(mail.cc) ? mail.cc : (mail.cc ? [mail.cc] : []);
+      if (ccArr.length > 0) {
+        ccRow.classList.remove('hidden');
+        document.getElementById('email-cc').textContent = ccArr.join(', ');
+      } else {
+        ccRow.classList.add('hidden');
+      }
+
+      // Star status
+      const starBtn = document.getElementById('detail-star-btn');
+      starBtn.innerHTML = mail.flagged 
+        ? `<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400"></i>` 
+        : `<i data-lucide="star" class="w-4 h-4"></i>`;
+
+      // Tags badge
+      const tagContainer = document.getElementById('email-tag-badges');
+      tagContainer.innerHTML = (mail.tags || []).map(tag => `
+        <span class="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+          ${escapeHtml(tag)}
+        </span>
+      `).join('');
+
+      // Attachments
+      const attachSection = document.getElementById('email-attachments-section');
+      const attachContainer = document.getElementById('attachments-container');
+      const attachList = mail.attachments || [];
+
+      if (attachList.length > 0) {
+        attachSection.classList.remove('hidden');
+        document.getElementById('attachments-count').textContent = attachList.length;
+        attachContainer.innerHTML = attachList.map(att => `
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs shadow-sm hover:border-emerald-500 transition">
+            <i data-lucide="file" class="w-4 h-4 text-emerald-600"></i>
+            <span class="font-medium text-slate-800 dark:text-slate-200">${escapeHtml(att.name)}</span>
+            <span class="text-[10px] text-slate-400 font-mono">(${att.size || 'file'})</span>
+            <button onclick="downloadMockAttachment('${escapeHtml(att.name)}')" class="p-1 hover:text-emerald-600 text-slate-400 ml-1" title="Download Document">
+              <i data-lucide="download" class="w-3 h-3"></i>
+            </button>
+          </div>
+        `).join('');
+      } else {
+        attachSection.classList.add('hidden');
+      }
+
+      // Body display
+      const bodyEl = document.getElementById('email-body-text');
+      const rawEl = document.getElementById('email-body-raw');
+
+      // Highlight keyword in body if search is active
+      const bodyTextEscaped = escapeHtml(mail.body_text || '(Empty Body)');
+      bodyEl.innerHTML = highlightMatches(bodyTextEscaped, searchQuery);
+
+      // Raw RFC view
+      rawEl.textContent = generateRawEmlString(mail);
+
+      // Re-render list to reflect selection style
+      renderEmailList();
+      lucide.createIcons();
+    }
+
+    // 6. SEARCH & FILTER HANDLERS
+    function handleSearch(query) {
+      searchQuery = query;
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (query.trim() !== '') {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderEmailList();
+      if (selectedEmailId) {
+        selectEmail(selectedEmailId, false);
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      handleSearch('');
+      input.focus();
+    }
+
+    function setFilter(type, val) {
+      currentFilter = { type, value: val };
+
+      // Update Nav active classes
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.remove('bg-slate-200/60', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+        el.classList.add('text-slate-600', 'dark:text-slate-400');
+      });
+
+      if (type === 'folder') {
+        const activeNav = document.getElementById(`nav-${val}`);
+        if (activeNav) {
+          activeNav.classList.add('bg-slate-200/60', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+          activeNav.classList.remove('text-slate-600', 'dark:text-slate-400');
+        }
+      }
+
+      const clearTagBtn = document.getElementById('clear-tag-btn');
+      if (type === 'tag') {
+        clearTagBtn.classList.remove('hidden');
+      } else {
+        clearTagBtn.classList.add('hidden');
+      }
+
+      renderEmailList();
+    }
+
+    function clearTagFilter() {
+      setFilter('folder', 'all');
+    }
+
+    function handleSortChange(val) {
+      sortOrder = val;
+      renderEmailList();
+    }
+
+    function toggleCurrentFlag() {
+      if (!selectedEmailId) return;
+      const email = emails.find(e => e.id === selectedEmailId);
+      if (email) {
+        email.flagged = !email.flagged;
+        saveEmailsToStorage();
+        selectEmail(selectedEmailId, false);
+        recalculateStatsAndTags();
+        showToast(email.flagged ? "Added to flagged records" : "Removed flag");
+      }
+    }
+
+    function setBodyView(mode) {
+      bodyViewMode = mode;
+      const plainBtn = document.getElementById('view-mode-plain');
+      const rawBtn = document.getElementById('view-mode-raw');
+      const plainBody = document.getElementById('email-body-text');
+      const rawBody = document.getElementById('email-body-raw');
+
+      if (mode === 'plain') {
+        plainBtn.classList.add('bg-emerald-100', 'dark:bg-emerald-950', 'text-emerald-800', 'dark:text-emerald-300');
+        plainBtn.classList.remove('text-slate-500');
+        rawBtn.classList.remove('bg-emerald-100', 'dark:bg-emerald-950', 'text-emerald-800', 'dark:text-emerald-300');
+        rawBtn.classList.add('text-slate-500');
+        plainBody.classList.remove('hidden');
+        rawBody.classList.add('hidden');
+      } else {
+        rawBtn.classList.add('bg-emerald-100', 'dark:bg-emerald-950', 'text-emerald-800', 'dark:text-emerald-300');
+        rawBtn.classList.remove('text-slate-500');
+        plainBtn.classList.remove('bg-emerald-100', 'dark:bg-emerald-950', 'text-emerald-800', 'dark:text-emerald-300');
+        plainBtn.classList.add('text-slate-500');
+        plainBody.classList.add('hidden');
+        rawBody.classList.remove('hidden');
+      }
+    }
+
+    // 7. INGESTION & UPLOAD (.JSON or .EML)
+    function setupFileUploader() {
+      const uploader = document.getElementById('file-uploader');
+      uploader.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        let addedCount = 0;
+
+        for (const file of files) {
+          if (file.name.endsWith('.json')) {
+            try {
+              const text = await file.text();
+              const parsed = JSON.parse(text);
+              if (Array.isArray(parsed)) {
+                // Ensure IDs
+                parsed.forEach((m, idx) => {
+                  if (!m.id) m.id = `foia-upload-${Date.now()}-${idx}`;
+                });
+                emails = [...parsed, ...emails];
+                addedCount += parsed.length;
+              }
+            } catch (err) {
+              showToast("Failed to parse JSON file");
+            }
+          } else if (file.name.endsWith('.eml')) {
+            try {
+              const text = await file.text();
+              const parsedEml = parseRawEML(text, file.name);
+              emails.unshift(parsedEml);
+              addedCount++;
+            } catch (err) {
+              console.error(err);
+              showToast("Failed to parse EML file: " + file.name);
+            }
+          }
+        }
+
+        saveEmailsToStorage();
+        recalculateStatsAndTags();
+        renderEmailList();
+        if (emails.length > 0) selectEmail(emails[0].id);
+        showToast(`Successfully ingested ${addedCount} record(s)`);
+        uploader.value = '';
+      });
+    }
+
+    // Lightweight client-side MIME/EML Header Parser
+    function parseRawEML(rawText, filename) {
+      const lines = rawText.split(/\r?\n/);
+      let isBody = false;
+      const headers = {};
+      let currentHeader = '';
+      const bodyLines = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (!isBody) {
+          if (line.trim() === '') {
+            isBody = true;
+            continue;
+          }
+          // Continued folded header line
+          if (/^\s+/.test(line) && currentHeader) {
+            headers[currentHeader] += ' ' + line.trim();
+          } else {
+            const colonIdx = line.indexOf(':');
+            if (colonIdx > -1) {
+              currentHeader = line.slice(0, colonIdx).toLowerCase().trim();
+              headers[currentHeader] = line.slice(colonIdx + 1).trim();
+            }
+          }
+        } else {
+          bodyLines.push(line);
+        }
+      }
+
+      const id = `eml-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const toField = headers['to'] ? headers['to'].split(',').map(s => s.trim()) : [];
+      const ccField = headers['cc'] ? headers['cc'].split(',').map(s => s.trim()) : [];
+      
+      let parsedDate = new Date().toISOString();
+      if (headers['date']) {
+        try {
+          parsedDate = new Date(headers['date']).toISOString();
+        } catch (e) {}
+      }
+
+      return {
+        id: id,
+        from: headers['from'] || 'Unknown Sender',
+        to: toField,
+        cc: ccField,
+        date: parsedDate,
+        subject: headers['subject'] || filename,
+        tags: ['Uploaded .EML'],
+        flagged: false,
+        body_text: bodyLines.join('\n'),
+        attachments: []
+      };
+    }
+
+    // 8. EXPORTING & UTILITIES
+    function exportCurrentSelection() {
+      const data = getFilteredEmails();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `foia_email_export_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${data.length} records`);
+    }
+
+    function generateRawEmlString(mail) {
+      const toStr = Array.isArray(mail.to) ? mail.to.join(', ') : mail.to;
+      const ccStr = Array.isArray(mail.cc) ? mail.cc.join(', ') : mail.cc;
+      return `MIME-Version: 1.0\nMessage-ID: <${mail.id}@foia-vault.gov>\nDate: ${mail.date || ''}\nFrom: ${mail.from || ''}\nTo: ${toStr || ''}\n${ccStr ? `Cc: ${ccStr}\n` : ''}Subject: ${mail.subject || ''}\nContent-Type: text/plain; charset=UTF-8\n\n${mail.body_text || ''}`;
+    }
+
+    function downloadAsEML() {
+      if (!selectedEmailId) return;
+      const mail = emails.find(e => e.id === selectedEmailId);
+      if (!mail) return;
+
+      const raw = generateRawEmlString(mail);
+      const blob = new Blob([raw], { type: 'message/rfc822' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${mail.id}_${(mail.subject || 'record').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.eml`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Downloaded RFC 5322 .EML");
+    }
+
+    function downloadMockAttachment(filename) {
+      const content = `[FOIA RELEASE DEMO FILE]\nFilename: ${filename}\nDisclosed under Freedom of Information Act statutory release.\nAssociated Record ID: ${selectedEmailId}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Downloaded ${filename}`);
+    }
+
+    function copyPermalink() {
+      if (!selectedEmailId) return;
+      const permalink = `${window.location.origin}${window.location.pathname}#${selectedEmailId}`;
+      
+      // Fallback-safe clipboard copy
+      const tempInput = document.createElement('input');
+      tempInput.value = permalink;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      const label = document.getElementById('permalink-label');
+      label.textContent = "Copied!";
+      setTimeout(() => { label.textContent = "Copy Link"; }, 2000);
+      showToast("Direct permalink copied to clipboard");
+    }
+
+    function recalculateStatsAndTags() {
+      // 1. Total count
+      document.getElementById('stat-total-records').textContent = emails.length;
+      document.getElementById('badge-all-count').textContent = emails.length;
+
+      // 2. Flagged
+      const flaggedCount = emails.filter(e => e.flagged).length;
+      document.getElementById('badge-flagged-count').textContent = flaggedCount;
+
+      // 3. Attachments
+      const attachCount = emails.filter(e => e.attachments && e.attachments.length > 0).length;
+      document.getElementById('badge-attachments-count').textContent = attachCount;
+
+      // 4. Tags
+      const tagsMap = {};
+      emails.forEach(e => {
+        (e.tags || []).forEach(t => {
+          tagsMap[t] = (tagsMap[t] || 0) + 1;
+        });
+      });
+
+      const tagsContainer = document.getElementById('tags-list');
+      tagsContainer.innerHTML = Object.entries(tagsMap).map(([tag, count]) => `
+        <button onclick="setFilter('tag', '${escapeHtml(tag)}')" class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 transition">
+          <span>#${escapeHtml(tag)}</span>
+          <span class="text-[9px] text-slate-400 font-mono">(${count})</span>
+        </button>
+      `).join('');
+
+      // 5. Senders
+      const sendersMap = {};
+      emails.forEach(e => {
+        if (e.from) sendersMap[e.from] = (sendersMap[e.from] || 0) + 1;
+      });
+
+      const sendersContainer = document.getElementById('senders-list');
+      sendersContainer.innerHTML = Object.entries(sendersMap).slice(0, 8).map(([sender, count]) => `
+        <button onclick="setFilter('sender', '${escapeHtml(sender)}')" class="w-full text-left truncate flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+          <span class="truncate font-mono text-[11px]">${escapeHtml(sender)}</span>
+          <span class="text-[10px] text-slate-400 font-mono ml-1">(${count})</span>
+        </button>
+      `).join('');
+    }
+
+    function saveEmailsToStorage() {
+      try {
+        localStorage.setItem('foia_emails_vault', JSON.stringify(emails));
+      } catch (e) {
+        console.warn("Storage quota exceeded; running in-memory session only.");
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('foia_theme', isDark ? 'dark' : 'light');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      toast.classList.remove('translate-y-10', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 2500);
+    }
+
+    // Helper: Highlighting terms inside strings safely
+    function highlightMatches(text, query) {
+      if (!query || query.trim() === '') return text;
+      const cleanQ = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${cleanQ})`, 'gi');
+      return text.replace(regex, '<span class="mark-highlight">$1</span>');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatDateShort(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  </script>
+</body>
+</html>
