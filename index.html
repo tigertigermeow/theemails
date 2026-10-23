@@ -198,14 +198,80 @@
         </div>
       </div>
 
-      <!-- Scrollable List of Emails -->
-      <div id="email-list-container" class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
-        <!-- Injected via renderEmailList() -->
-      </div>
-    </section>
+      <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // 1. DATASET INITIALIZATION
+    const DEFAULT_EMAILS = [];
 
-    <!-- 3. RIGHT PANE (Email Detail Viewer) -->
-    <main id="printable-pane" class="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden relative select-text">
+    // State
+    let emails = [];
+    let currentFilter = { type: 'folder', value: 'all' }; // type: 'folder', 'tag', 'sender'
+    let searchQuery = '';
+    let selectedEmailId = null;
+    let sortOrder = 'date-desc';
+    let bodyViewMode = 'plain';
+
+    // 2. INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      // Initialize theme
+      if (localStorage.getItem('foia_theme') === 'dark' || (!('foia_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+
+      // Check URL hash for permalink
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        selectedEmailId = hash;
+      }
+
+      setupFileUploader();
+
+      // Automatically fetch emails.json if present
+      fetch('emails.json')
+        .then(response => {
+          if (!response.ok) throw new Error('No emails.json file found');
+          return response.json();
+        })
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            emails = data;
+          } else {
+            loadFromStorageOrDefault();
+          }
+        })
+        .catch(() => {
+          // Fallback to localStorage or empty array if emails.json isn't present
+          loadFromStorageOrDefault();
+        })
+        .finally(() => {
+          recalculateStatsAndTags();
+          renderEmailList();
+
+          if (selectedEmailId) {
+            const found = emails.find(e => e.id === selectedEmailId);
+            if (found) selectEmail(selectedEmailId);
+          } else if (emails.length > 0) {
+            selectEmail(emails[0].id);
+          }
+
+          lucide.createIcons();
+        });
+    });
+
+    function loadFromStorageOrDefault() {
+      const saved = localStorage.getItem('foia_emails_vault');
+      if (saved) {
+        try {
+          emails = JSON.parse(saved);
+        } catch (e) {
+          emails = [...DEFAULT_EMAILS];
+        }
+      } else {
+        emails = [...DEFAULT_EMAILS];
+      }
+    }
       
       <!-- Top Detail Toolbar -->
       <div class="no-print h-12 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0 select-none">
@@ -311,74 +377,13 @@
   <script>
     // 1. BUILT-IN REALISTIC FOIA DATASET (Simulated Department of Energy / Public Records archive)
     const DEFAULT_EMAILS = [
-      {
-        id: "foia-msg-0001",
-        from: "h.turner@hq.doe.gov",
-        to: ["m.garcia@llnl.gov", "r.vance@sandia.gov"],
-        cc: ["compliance-archive@hq.doe.gov"],
-        date: "2024-03-12T09:41:22Z",
-        subject: "URGENT: Redacted briefing memo regarding Project Boreas site assessment",
-        tags: ["Project Boreas", "Urgent", "Redactions"],
-        flagged: true,
-        body_text: "Marcus, Robert,\n\nFollowing up on yesterday's cabinet sub-committee inquiry. Attached is the revised summary regarding the geotechnical findings at Site 4.\n\nKey takeaways:\n1. The seismic sensors recorded intermittent anomalies between Jan 14 and Jan 28. [REDACTED PER FOIA EXEMPTION (b)(4)]\n2. The environmental assessment conducted by Dr. Aris confirmed zero water table contamination outside the secondary perimeter.\n3. The press office is preparing a standard Q&A document should local media inquiry spike this Friday.\n\nPlease confirm receipt of the telemetry data pack before 14:00 EST.\n\nRespectfully,\nHarold Turner\nOffice of Critical Infrastructure Assessments\nU.S. Department of Energy",
-        attachments: [
-          { name: "boreas_geotech_exec_summary_v3.pdf", size: "2.4 MB" },
-          { name: "seismic_sensor_batch_01.csv", size: "840 KB" }
+     
         ]
       },
-      {
-        id: "foia-msg-0002",
-        from: "m.garcia@llnl.gov",
-        to: ["h.turner@hq.doe.gov"],
-        cc: ["d.thorne@orau.gov"],
-        date: "2024-03-12T10:15:00Z",
-        subject: "Re: URGENT: Redacted briefing memo regarding Project Boreas site assessment",
-        tags: ["Project Boreas", "LLNL Review"],
-        flagged: false,
-        body_text: "Harold,\n\nReceived and reviewed. Dr. Thorne and I looked at the sensor metrics. \n\nNote that footnote 3 on page 9 misquotes the telemetry cadence—it was sampled every 250ms, not 1000ms. If this is submitted to Congressional oversight under the joint disclosure, we need that correction made immediately to prevent misinterpretation.\n\nAlso, has the IG's office cleared release of Appendix D? Last I heard, [REDACTED (b)(6)] requested an additional privacy redaction for the contracting officers listed.\n\nBest,\nMarcus Garcia, PhD\nLawrence Livermore National Laboratory",
-        attachments: []
-      },
-      {
-        id: "foia-msg-0003",
-        from: "j.sterling@contractor.aegis.com",
-        to: ["records-officer@hq.doe.gov", "foia-liaison@energy.gov"],
-        cc: [],
-        date: "2024-03-08T16:22:45Z",
-        subject: "Notice of Proprietary Claim: FOIA Request #HQ-2024-00912-F",
-        tags: ["Legal", "Contractor", "Exemption (b)(4)"],
-        flagged: true,
-        body_text: "Dear FOIA Appeals and Release Officer,\n\nWe represent Aegis Defense Dynamics in relation to the pending Freedom of Information Act disclosure #HQ-2024-00912-F.\n\nWe have completed our predisclosure notification review of the 318 pages identified for release. Please be advised that pages 112 through 145 contain proprietary algorithms, pricing schedules, and proprietary trade secrets strictly exempt from public disclosure under 5 U.S.C. § 552(b)(4).\n\nA formal letter detailing our legal objections and line-by-line redaction requests is attached for your general counsel's docket.\n\nSincerely,\nJonathan Sterling, Esq.\nSenior Counsel, Commercial Contracts",
-        attachments: [
-          { name: "Aegis_Objection_Letter_FOIA_b4.pdf", size: "4.1 MB" },
-          { name: "Redaction_Exhibit_A.pdf", size: "12.8 MB" }
-        ]
-      },
-      {
-        id: "foia-msg-0004",
-        from: "press-relations@energy.gov",
-        to: ["h.turner@hq.doe.gov", "secretary-staff@hq.doe.gov"],
-        cc: ["comms-team@energy.gov"],
-        date: "2024-03-04T11:04:19Z",
-        subject: "DRAFT Statement for Bloomberg reporter inquiry on grid modernization funding",
-        tags: ["Press", "Draft"],
-        flagged: false,
-        body_text: "Team,\n\nBloomberg's energy desk just emailed with three specific questions regarding the $45M grid modernization award distribution across Region 6. They have set a deadline for 17:00 ET today.\n\nProposed on-the-record response:\n\"The Department remains committed to equitable resilience upgrades in line with statutory criteria set forth under Title IV. All grant awards undergo rigorous multi-tier technical evaluation by independent panel experts.\"\n\nPlease let me know if Harold or the Deputy Assistant Secretary has any reservations before we clear this with front office.\n\nBest,\nSarah Jenkins\nDirector of Public Affairs",
-        attachments: []
-      },
-      {
-        id: "foia-msg-0005",
-        from: "r.vance@sandia.gov",
-        to: ["h.turner@hq.doe.gov", "m.garcia@llnl.gov"],
-        cc: [],
-        date: "2024-02-28T14:50:11Z",
-        subject: "Inter-laboratory calibration notes - February summary",
-        tags: ["LLNL Review", "Technical"],
-        flagged: false,
-        body_text: "Harold, Marcus,\n\nAttached is the monthly progress report on calibration standards across our test facilities.\n\nEverything came back nominal. Average variance remained below 0.04%, well within the acceptable threshold outlined in SOP-942.\n\nWe will be dark next Tuesday for facility maintenance. If you need any raw log exports before then, request them by COB tomorrow.\n\nRegards,\nRobert Vance\nSandia National Laboratories",
-        attachments: [
-          { name: "calibration_feb_2024.xlsx", size: "1.1 MB" }
-        ]
-      }
+      
+      
+      
+      
     ];
 
     // State
